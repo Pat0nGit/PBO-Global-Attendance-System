@@ -31,10 +31,14 @@ app.listen(PORT, () =>
   console.log(`Server running at http://localhost:${PORT}`)
 );
 
-app.get("/api/backup", (req, res) => {
-  const secret = req.query.key;
-  if (secret !== process.env.BACKUP_KEY)
-    return res.status(403).send("Forbidden");
+const { exportLogsToCSVAndSendEmail } = require("./daily.backup");
 
-  runBackup(() => res.send(" Backup complete"));
+app.get("/run-daily-backup", async (req, res) => {
+  try {
+    const result = await exportLogsToCSVAndSendEmail();
+    res.send(result);
+  } catch (error) {
+    console.error("Backup error:", error);
+    res.status(500).send("Backup failed: " + error.message);
+  }
 });

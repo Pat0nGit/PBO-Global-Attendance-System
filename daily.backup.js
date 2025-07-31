@@ -1,3 +1,4 @@
+// daily.backup.js
 require("dotenv").config();
 const sqlite3 = require("sqlite3").verbose();
 const fs = require("fs");
@@ -7,30 +8,38 @@ const { format } = require("date-fns");
 
 const db = new sqlite3.Database(path.join(__dirname, "data.sqlite"));
 
-function exportLogsToCSVAndSendEmail() {
+async function exportLogsToCSVAndSendEmail() {
   return new Promise((resolve, reject) => {
     const today = format(new Date(), "yyyy-MM-dd");
-    const filename = `backup-${today}.csv`;
-    const filePath = path.join(__dirname, filename);
+    const filename = `backup_${today}.csv`;
+    const filepath = path.join(__dirname, filename);
 
     const query = `
-      SELECT u.employee_id, u.name, u.role, l.date, l.time_in, l.time_out, l.hours
-      FROM logs l
-      JOIN users u ON l.user_id = u.id
-      WHERE l.date = ?
+      SELECT logs.id, users.employee_id, users.name, users.role, logs.date, logs.time_in, logs.time_out, logs.hours
+      FROM logs
+      JOIN users ON users.id = logs.user_id
+      WHERE logs.date = ?
     `;
 
-    db.all(query, [today], (err, rows) => {
-      if (err) return reject(err);
+    db.all(query, [today], async (err, rows) => {
+      if (err) {
+        console.error("DB error:", err);
+        return reject(err);
+      }
 
-      const header = "Employee ID,Name,Role,Date,Time In,Time Out,Hours\n";
-      const csvData = rows.map(
-        (row) =>
-          `${row.employee_id},${row.name},${row.role},${row.date},${row.time_in},${row.time_out},${row.hours}`
-      );
+      if (rows.length === 0) {
+        console.log("No logs for today.");
+        return resolve("No logs for today.");
+      }
 
-      fs.writeFileSync(filePath, header + csvData.join("\n"));
+      // Convert rows to CSV
+      const header = Object.keys(rows[0]).join(",") + "\n";
+      const data = rows.map((row) => Object.values(row).join(",")).join("\n");
+      const csv = header + data;
 
+      fs.writeFileSync(filepath, csv);
+
+      // Send via email
       const transporter = nodemailer.createTransport({
         service: process.env.EMAIL_SERVICE,
         auth: {
@@ -39,25 +48,26 @@ function exportLogsToCSVAndSendEmail() {
         },
       });
 
-      const mailOptions = {
-        from: `"Attendance Backup" <${process.env.EMAIL_USER}>`,
-        to: process.env.ADMIN_EMAIL,
-        subject: `Daily Logs Backup - ${today}`,
-        text: "Attached is the daily backup CSV of logs.",
-        attachments: [
-          {
-            filename,
-            path: filePath,
-          },
-        ],
-      };
+      try {
+        await transporter.sendMail({
+          from: `"PBO GLOBAL" <${process.env.EMAIL_USER}>`,
+          to: process.env.ADMIN_EMAIL,
+          subject: `Daily Logs Backup – ${today}`,
+          text: "Attached is the CSV backup for today's logs.",
+          attachments: [
+            {
+              filename,
+              path: filepath,
+            },
+          ],
+        });
 
-      transporter.sendMail(mailOptions, (error, info) => {
-        fs.unlinkSync(filePath); // Clean up file after sending
-
-        if (error) return reject(error);
-        resolve(`Backup sent: ${info.response}`);
-      });
+        resolve(
+          `Logs exported to ${filename} and email sent to ${process.env.ADMIN_EMAIL}`
+        );
+      } catch (emailErr) {
+        reject(emailErr);
+      }
     });
   });
 }

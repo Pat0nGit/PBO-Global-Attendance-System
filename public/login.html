@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login | PBO GLOBAL</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body class="login-screen">
+
+  <div class="login-box">
+    <img src="./images/logo.png" alt="PBO GLOBAL Logo" class="logo" />
+    <h2>Login</h2>
+    <p>Please login to your employee account</p>
+
+    <form id="loginForm" autocomplete="off">
+      <label for="employee_id">Employee ID:</label>
+      <input
+        type="text"
+        id="employee_id"
+        name="employee_id"
+        placeholder="Enter your Employee ID"
+        required
+        aria-label="Employee ID"
+      />
+
+      <label for="pin">PIN:</label>
+      <input
+        type="password"
+        id="pin"
+        name="pin"
+        placeholder="•••••••••"
+        required
+        aria-label="PIN"
+      />
+
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+  <script src="./js/utils.js"></script>
+  <script src="./js/auth.js"></script>
+</body>
+</html>

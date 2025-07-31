@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Manage Users | PBO GLOBAL</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body class="dashboard-screen">
+  <div class="dashboard-container">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="greeting">Hello, <span id="username">Admin</span></div>
+      <button class="btn-bubble-red" onclick="logout()">LOG OUT</button>
+    </div>
+
+    <!-- Back Button -->
+    <div id="backBtnContainer" style="margin: 1rem 0;"></div>
+
+<h2 style="margin-bottom: 1.5rem;">Manage Users</h2>
+
+<!-- Add User Form -->
+<div class="form-card">
+  <h3 class="form-title"> Add New User</h3>
+  <form id="addUserForm" class="form-grid">
+    <div class="form-group">
+      <label for="name">Full Name</label>
+      <input id="name" required />
+    </div>
+
+    <div class="form-group">
+      <label for="employee_id">Employee ID</label>
+      <input id="employee_id" required />
+    </div>
+
+    <div class="form-group">
+      <label for="pin">PIN</label>
+      <input id="pin" type="password" required />
+    </div>
+
+    <div class="form-group">
+      <label for="email">Email <span style="opacity: 0.6;">(optional)</span></label>
+      <input id="email" type="email" />
+    </div>
+
+    <div class="form-group">
+      <label for="role">Role</label>
+      <select id="role">
+        <option value="employee">Employee</option>
+        <option value="intern">Intern</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-bubble-blue">Add User</button>
+    </div>
+  </form>
+</div>
+
+    <!-- User Table -->
+    <div class="log-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>ID</th>
+            <th>Role</th>
+            <th>Email</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="userRows">
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <div id="editModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Edit User</h3>
+      <form id="editUserForm">
+        <input type="hidden" id="edit_id" />
+        <label>Name</label>
+        <input id="edit_name" required />
+        <label>Employee ID</label>
+        <input id="edit_employee_id" required />
+        <label>Email</label>
+        <input id="edit_email" />
+        <label>Role</label>
+        <select id="edit_role">
+          <option value="employee">Employee</option>
+          <option value="intern">Intern</option>
+          <option value="admin">Admin</option>
+        </select>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn-bubble-blue"> Save</button>
+          <button type="button" class="btn-bubble-red" onclick="closeEditModal()">✖ Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="./js/utils.js"></script>
+  <script src="./js/users.js"></script>
+</body>
+</html>

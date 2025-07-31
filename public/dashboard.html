@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PBO Dashboard</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body class="dashboard-screen">
+
+  <!-- Center Logo -->
+  <div class="logo-container">
+    <img src="./images/logo.png" alt="PBO Logo" class="dashboard-logo" />
+  </div>
+
+  <div class="dashboard-container">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="greeting">Hello, <span id="username">User</span></div>
+      <button class="btn-logout" onclick="logout()">LOG OUT</button>
+    </div>
+
+    <!-- Clock Section -->
+    <div class="clock-section">
+      <div class="analog-clock">
+        <div class="hand hour"></div>
+        <div class="hand minute"></div>
+        <div class="hand second"></div>
+        <div class="center-dot"></div>
+      </div>
+      <div class="digital-clock" id="clock">00:00:00</div>
+      <div class="buttons">
+        <button id="timeInBtn" class="btn-bubble-blue">TIME IN</button>
+        <button id="timeOutBtn" class="btn-bubble-blue">TIME OUT</button>
+      </div>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="log-table">
+      <h2>Your Logs</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Time In</th>
+            <th>Time Out</th>
+            <th>Hours</th>
+          </tr>
+        </thead>
+        <tbody id="logRows">
+          <!-- Filled by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="actions">
+      <button id="exportBtn" class="btn-bubble-yellow">EXPORT LOG</button>
+      <button class="btn-bubble-red" onclick="openLeaveForm()">APPLY LEAVE</button>
+    </div>
+  </div>
+
+  <!-- Leave Modal -->
+  <div id="leaveModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Leave Request</h3>
+      <form id="leaveForm">
+        <label>Reason</label>
+        <textarea id="reason" required></textarea>
+
+        <label>From Date</label>
+        <input type="date" id="from_date" required />
+
+        <label>To Date</label>
+        <input type="date" id="to_date" />
+
+        <div class="modal-actions">
+          <button type="submit" class="btn-bubble-yellow">Submit</button>
+          <button type="button" onclick="closeLeaveForm()" class="btn-bubble-red">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="./js/utils.js"></script>
+  <script src="./js/dashboard.js"></script>
+  <script>
+    // Live digital clock
+    function showClock() {
+      const now = new Date();
+      const time = now.toLocaleTimeString("en-US", { hour12: false });
+      document.getElementById("clock").textContent = time;
+      requestAnimationFrame(showClock);
+    }
+
+    // Analog clock animation
+    function animateAnalogClock() {
+      const now = new Date();
+      const sec = now.getSeconds();
+      const min = now.getMinutes();
+      const hr = now.getHours();
+
+      const secondDeg = sec * 6;
+      const minuteDeg = min * 6 + sec * 0.1;
+      const hourDeg = (hr % 12) * 30 + min * 0.5;
+
+      document.querySelector(".hand.second").style.transform = `translateX(-50%) rotate(${secondDeg}deg)`;
+      document.querySelector(".hand.minute").style.transform = `translateX(-50%) rotate(${minuteDeg}deg)`;
+      document.querySelector(".hand.hour").style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
+
+      requestAnimationFrame(animateAnalogClock);
+    }
+
+
+    showClock();
+    animateAnalogClock();
+  </script>
+</body>
+</html>

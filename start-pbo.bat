@@ -1,0 +1,6 @@
+@echo off
+title Starting PBO Attendance System...
+echo Launching server...
+start http://localhost:3000
+node server.js
+pause

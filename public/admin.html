@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard | PBO GLOBAL</title>
+  <link rel="stylesheet" href="./css/style.css" />
+  
+</head>
+<body class="dashboard-screen">
+  <div class="dashboard-container">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="greeting">Hello, <span id="username">Admin</span></div>
+      <button class="btn-bubble-red" onclick="logout()">LOG OUT</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <label>From: <input type="date" id="filterFrom" /></label>
+      <label>To: <input type="date" id="filterTo" /></label>
+      <label>Name/ID: <input type="text" id="filterName" placeholder="Name or ID" /></label>
+      <button onclick="fetchFilteredLogs()" class="btn-bubble-blue">Filter Logs</button>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="log-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Date</th>
+            <th>Time In</th>
+            <th>Time Out</th>
+            <th>Hours</th>
+          </tr>
+        </thead>
+        <tbody id="logRows"></tbody>
+      </table>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions" style="margin-top: 1rem;">
+      <button id="exportBtn" class="btn-bubble-yellow">EXPORT LOG</button>
+      <button id="manageUsersBtn" class="btn-bubble-blue">MANAGE USERS</button>
+    </div>
+
+    <!-- Leave Requests -->
+    <h3 style="margin-top: 2rem;">Leave Requests <span class="badge hidden" id="leaveBadge">0</span></h3>
+    <div class="log-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="leaveRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Leave Detail Modal -->
+  <div id="leaveModal" class="modal hidden">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal()">&times;</span>
+     <h3>Leave Details</h3>
+<hr style="margin-bottom: 1rem;" />
+<div class="modal-detail"><strong>Name:</strong> <span id="modalName"></span></div>
+<div class="modal-detail"><strong>From:</strong> <span id="modalFrom"></span></div>
+<div class="modal-detail"><strong>To:</strong> <span id="modalTo"></span></div>
+<div class="modal-detail"><strong>Status:</strong> <span id="modalStatus"></span></div>
+<div class="modal-detail"><strong>Reason:</strong></div>
+<div id="modalReason" style="margin-top: 0.25rem;"></div>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "./login.html";
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) logout();
+
+    function renderLogs(logs) {
+      const rows = logs.map(log => `
+        <tr>
+          <td>${log.name}</td>
+          <td>${log.role}</td>
+          <td>${log.date}</td>
+          <td>${log.time_in || "-"}</td>
+          <td>${log.time_out || "-"}</td>
+          <td>${log.hours?.toFixed(2) || "0.00"}</td>
+        </tr>
+      `).join("");
+      document.getElementById("logRows").innerHTML = rows;
+    }
+
+    function renderLeaves(leaves) {
+      const badge = document.getElementById("leaveBadge");
+      const pending = leaves.filter(l => l.status === "pending");
+      badge.textContent = pending.length;
+      badge.classList.toggle("hidden", pending.length === 0);
+
+      const rows = leaves.map(leave => {
+        const shortReason = leave.reason.length > 15
+          ? leave.reason.slice(0, 15) + "..."
+          : leave.reason;
+
+        const actions = `
+          <button onclick="viewLeave(${leave.id})" class="btn-bubble-yellow">View</button>
+          ${leave.status === "pending" ? `
+            <button onclick="updateLeave(${leave.id}, 'approved')" class="btn-bubble-blue">Approve</button>
+            <button onclick="updateLeave(${leave.id}, 'rejected')" class="btn-bubble-red">Reject</button>
+          ` : ""}
+        `;
+
+        return `
+          <tr>
+            <td>${leave.name}</td>
+            <td>${leave.from_date}</td>
+            <td>${leave.to_date || "-"}</td>
+            <td class="reason-cell">${shortReason}</td>
+            <td>${leave.status}</td>
+            <td>${actions}</td>
+          </tr>
+        `;
+      }).join("");
+
+      document.getElementById("leaveRows").innerHTML = rows;
+    }
+
+    async function fetchFilteredLogs() {
+      const from = document.getElementById("filterFrom")?.value;
+      const to = document.getElementById("filterTo")?.value;
+      const name = document.getElementById("filterName")?.value;
+
+      const params = new URLSearchParams();
+      if (from) params.append("from", from);
+      if (to) params.append("to", to);
+      if (name) params.append("name", name);
+
+      try {
+        const res = await fetch(`/api/logs/all?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch logs");
+        const logs = await res.json();
+        renderLogs(logs);
+      } catch (err) {
+        console.error("Log fetch error:", err);
+        alert("Could not load logs.");
+      }
+    }
+
+    async function exportCSV() {
+      const from = document.getElementById("filterFrom")?.value;
+      const to = document.getElementById("filterTo")?.value;
+      const name = document.getElementById("filterName")?.value;
+
+      const params = new URLSearchParams();
+      if (from) params.append("from", from);
+      if (to) params.append("to", to);
+      if (name) params.append("name", name);
+
+      try {
+        const res = await fetch(`/api/logs/export?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          return alert(err.error || "Export failed.");
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "filtered_logs.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("Export error:", err);
+        alert("Failed to export logs.");
+      }
+    }
+
+    async function fetchLeaves() {
+      try {
+        const res = await fetch("/api/leave/all", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Leave fetch failed");
+        const leaves = await res.json();
+        renderLeaves(leaves);
+      } catch (err) {
+        console.error("Fetch leaves error:", err);
+        alert("Failed to fetch leave requests.");
+      }
+    }
+
+    async function updateLeave(id, status) {
+      try {
+        const res = await fetch(`/api/leave/${id}/status`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert(data.message || `Leave ${status}`);
+          fetchLeaves();
+        } else {
+          console.error(`Leave update failed [${status}]:`, data);
+          alert(data.error || "Action failed.");
+        }
+      } catch (err) {
+        console.error(`Error updating leave (${status}):`, err);
+        alert("Failed to update leave.");
+      }
+    }
+
+    async function viewLeave(id) {
+      console.log("viewLeave triggered with ID:", id);
+      try {
+        const res = await fetch(`/api/leave/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Failed to fetch leave detail");
+        const leave = await res.json();
+
+        document.getElementById("modalName").textContent = leave.name;
+        document.getElementById("modalFrom").textContent = leave.from_date;
+        document.getElementById("modalTo").textContent = leave.to_date || "-";
+        document.getElementById("modalStatus").textContent = leave.status;
+        document.getElementById("modalReason").textContent = leave.reason;
+
+        document.getElementById("leaveModal").classList.remove("hidden");
+      } catch (err) {
+        console.error("Error viewing leave:", err);
+        alert("Could not load leave details.");
+      }
+    }
+
+    function closeModal() {
+      document.getElementById("leaveModal").classList.add("hidden");
+    }
+
+    // Event Listeners
+    document.getElementById("filterFrom")?.addEventListener("change", fetchFilteredLogs);
+    document.getElementById("filterTo")?.addEventListener("change", fetchFilteredLogs);
+    document.getElementById("filterName")?.addEventListener("input", fetchFilteredLogs);
+    document.getElementById("exportBtn")?.addEventListener("click", exportCSV);
+    document.getElementById("manageUsersBtn")?.addEventListener("click", () => {
+      window.location.href = "./users.html";
+    });
+
+    async function viewLeave(id) {
+  try {
+    const res = await fetch(`/api/leave/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error("Failed to fetch leave detail");
+    const leave = await res.json();
+
+    document.getElementById("modalName").textContent = leave.name;
+    document.getElementById("modalFrom").textContent = leave.from_date;
+    document.getElementById("modalTo").textContent = leave.to_date || "-";
+    document.getElementById("modalStatus").textContent = leave.status;
+    document.getElementById("modalReason").textContent = leave.reason;
+
+    document.getElementById("leaveModal").classList.remove("hidden");
+  } catch (err) {
+    console.error("Error viewing leave:", err);
+    alert("Could not load leave details.");
+  }
+}
+
+
+    fetchFilteredLogs();
+    fetchLeaves();
+  </script>
+</body>
+</html>

@@ -22,15 +22,6 @@ app.get(/^\/(dashboard|admin)\.html$/, (req, res) => {
   res.sendFile(path.join(__dirname, "public", req.path));
 });
 
-app.use((req, res) => {
-  res.status(404).send("404 - Not Found");
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () =>
-  console.log(`Server running at http://localhost:${PORT}`)
-);
-
 const { exportLogsToCSVAndSendEmail } = require("./daily.backup");
 
 app.get("/run-daily-backup", async (req, res) => {
@@ -42,3 +33,12 @@ app.get("/run-daily-backup", async (req, res) => {
     res.status(500).send("Backup failed: " + error.message);
   }
 });
+
+app.use((req, res) => {
+  res.status(404).send("404 - Not Found");
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () =>
+  console.log(`Server running at http://localhost:${PORT}`)
+);

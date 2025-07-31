@@ -4,12 +4,12 @@ const path = require("path");
 const nodemailer = require("nodemailer");
 const sqlite3 = require("sqlite3").verbose();
 
-const db = new sqlite3.Database(path.join(__dirname, "data.sqlite"));
+const db = new sqlite3.Database(path.join(__dirname, "data.sqlite")); // Adjust path if needed
 
-const today = new Date().toISOString().split("T")[0];
-const filename = path.join(__dirname, `logs-${today}.csv`);
+function runBackup(callback) {
+  const today = new Date().toISOString().split("T")[0];
+  const filename = path.join(__dirname, `logs-${today}.csv`);
 
-function exportLogsToCSV(callback) {
   const stream = fs.createWriteStream(filename);
   stream.write("Name,Employee ID,Role,Date,Time In,Time Out,Hours\n");
 
@@ -29,44 +29,37 @@ function exportLogsToCSV(callback) {
       });
 
       stream.end(() => {
-        console.log(" CSV created:", filename);
-        callback();
+        console.log("CSV created:", filename);
+
+        // Send email
+        const transporter = nodemailer.createTransport({
+          service: process.env.EMAIL_SERVICE,
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+
+        const mailOptions = {
+          from: process.env.EMAIL_USER,
+          to: process.env.ADMIN_EMAIL,
+          subject: `Daily Logs Backup ${today}`,
+          text: `Backup logs for ${today} attached.`,
+          attachments: [{ filename: `logs-${today}.csv`, path: filename }],
+        };
+
+        transporter.sendMail(mailOptions, (err, info) => {
+          if (err) {
+            console.error("Email error:", err);
+          } else {
+            console.log("Backup email sent to:", process.env.ADMIN_EMAIL);
+            console.log(info.response);
+          }
+          if (callback) callback(); // call if needed
+        });
       });
     }
   );
 }
 
-function sendEmail() {
-  const transporter = nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: process.env.ADMIN_EMAIL,
-    subject: ` Daily Logs Backup ${today}`,
-    text: `Backup logs for ${today} attached.`,
-    attachments: [
-      {
-        filename: `logs-${today}.csv`,
-        path: filename,
-      },
-    ],
-  };
-
-  transporter.sendMail(mailOptions, (err, info) => {
-    if (err) {
-      console.error(" Email error:", err);
-    } else {
-      console.log("Backup email sent to:", process.env.ADMIN_EMAIL);
-      console.log(info.response);
-    }
-  });
-}
-
-// Start backup
-exportLogsToCSV(sendEmail);
+module.exports = runBackup;

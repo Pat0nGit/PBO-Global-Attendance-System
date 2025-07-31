@@ -30,3 +30,11 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
   console.log(`Server running at http://localhost:${PORT}`)
 );
+
+app.get("/api/backup", (req, res) => {
+  const secret = req.query.key;
+  if (secret !== process.env.BACKUP_KEY)
+    return res.status(403).send("Forbidden");
+
+  runBackup(() => res.send(" Backup complete"));
+});

@@ -62,6 +62,9 @@ async function exportLogsToCSVAndSendEmail() {
           ],
         });
 
+        //  Delete file after successful send
+        fs.unlinkSync(filepath);
+
         resolve(
           `Logs exported to ${filename} and email sent to ${process.env.ADMIN_EMAIL}`
         );
@@ -72,4 +75,4 @@ async function exportLogsToCSVAndSendEmail() {
   });
 }
 
-module.exports = { exportLogsToCSVAndSendEmail };
+exportLogsToCSVAndSendEmail().then(console.log).catch(console.error);

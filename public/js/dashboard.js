@@ -3,8 +3,16 @@ function logout() {
   window.location.href = "./login.html";
 }
 
-// 12-hour digital clock
-function showClock() {
+function toPHTimeString(dateStr, isTimeOnly = false) {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  const utc8 = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+  return isTimeOnly
+    ? utc8.toLocaleTimeString("en-GB", { hour12: false })
+    : utc8.toISOString().split("T")[0];
+}
+
+function showDigitalClock() {
   const now = new Date();
   const options = {
     hour: "numeric",
@@ -16,29 +24,24 @@ function showClock() {
     "en-US",
     options
   );
-  requestAnimationFrame(showClock);
+  requestAnimationFrame(showDigitalClock);
 }
 
-// Analog clock with smooth rotation
 function animateAnalogClock() {
   const now = new Date();
   const sec = now.getSeconds() + now.getMilliseconds() / 1000;
   const min = now.getMinutes() + sec / 60;
-  const hr = (now.getHours() % 12) + min / 60;
-
-  const secondDeg = sec * 6;
-  const minuteDeg = min * 6;
-  const hourDeg = hr * 30;
+  const hr = now.getHours() + min / 60;
 
   document.querySelector(
     ".hand.second"
-  ).style.transform = `translateX(-50%) rotate(${secondDeg}deg)`;
+  ).style.transform = `translateX(-50%) rotate(${sec * 6}deg)`;
   document.querySelector(
     ".hand.minute"
-  ).style.transform = `translateX(-50%) rotate(${minuteDeg}deg)`;
+  ).style.transform = `translateX(-50%) rotate(${min * 6}deg)`;
   document.querySelector(
     ".hand.hour"
-  ).style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
+  ).style.transform = `translateX(-50%) rotate(${hr * 30}deg)`;
 
   requestAnimationFrame(animateAnalogClock);
 }
@@ -57,20 +60,6 @@ function getUserInfo() {
   }
 }
 
-// Adjust UTC time to PH time (UTC+8)
-function toPHT(time) {
-  if (!time) return "-";
-  const date = new Date(time + "Z");
-  return date.toLocaleTimeString("en-PH", {
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZone: "Asia/Manila",
-  });
-}
-
-// Fetch and display logs
 async function fetchLogs() {
   const token = localStorage.getItem("token");
   if (!token) return logout();
@@ -79,18 +68,18 @@ async function fetchLogs() {
     const res = await fetch("/api/logs/user", {
       headers: { Authorization: `Bearer ${token}` },
     });
-    const logs = await res.json();
 
+    const logs = await res.json();
     const rows = logs
       .map(
         (log) => `
-      <tr>
-        <td>${log.date}</td>
-        <td>${toPHT(log.time_in)}</td>
-        <td>${toPHT(log.time_out)}</td>
-        <td>${log.hours?.toFixed(2) || "0.00"}</td>
-      </tr>
-    `
+        <tr>
+          <td>${toPHTimeString(log.date)}</td>
+          <td>${toPHTimeString(log.time_in, true)}</td>
+          <td>${toPHTimeString(log.time_out, true)}</td>
+          <td>${log.hours?.toFixed(2) || "0.00"}</td>
+        </tr>
+      `
       )
       .join("");
 
@@ -101,7 +90,35 @@ async function fetchLogs() {
   }
 }
 
-// Time punch
+async function exportCSV() {
+  const token = localStorage.getItem("token");
+  if (!token) return logout();
+
+  try {
+    const res = await fetch("/api/logs/export/user", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      return alert(err.error || "Export failed.");
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "my_logs.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert("Export failed.");
+    console.error(err);
+  }
+}
+
 async function timePunch(type) {
   const token = localStorage.getItem("token");
   if (!token) return logout();
@@ -128,45 +145,14 @@ async function timePunch(type) {
   }
 }
 
-// Export logs
-async function exportCSV() {
-  const token = localStorage.getItem("token");
-  if (!token) return logout();
-
-  try {
-    const res = await fetch("/api/logs/export/user", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      return alert(err.error || "Export failed.");
-    }
-
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "my_logs.csv";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    alert("Export failed.");
-    console.error(err);
-  }
-}
-
-// Leave form
 function openLeaveForm() {
   document.getElementById("leaveModal").classList.remove("hidden");
 }
+
 function closeLeaveForm() {
   document.getElementById("leaveModal").classList.add("hidden");
 }
 
-// Submit leave
 document.getElementById("leaveForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const token = localStorage.getItem("token");
@@ -203,19 +189,28 @@ document.getElementById("leaveForm").addEventListener("submit", async (e) => {
   }
 });
 
-// Events
 document
   .getElementById("timeInBtn")
-  .addEventListener("click", () => timePunch("time-in"));
+  ?.addEventListener("click", () => timePunch("time-in"));
 document
   .getElementById("timeOutBtn")
-  .addEventListener("click", () => timePunch("time-out"));
-document.getElementById("exportBtn").addEventListener("click", exportCSV);
+  ?.addEventListener("click", () => timePunch("time-out"));
+document.getElementById("exportBtn")?.addEventListener("click", exportCSV);
 
-// Init
 document.addEventListener("DOMContentLoaded", () => {
-  showClock();
-  animateAnalogClock();
-  getUserInfo();
-  fetchLogs();
+  const toggleBtn = document.createElement("button");
+  toggleBtn.className = "night-toggle";
+  toggleBtn.textContent = " Night Mode";
+  toggleBtn.onclick = () => {
+    document.body.classList.toggle("night-mode");
+    toggleBtn.textContent = document.body.classList.contains("night-mode")
+      ? " Light Mode"
+      : " Night Mode";
+  };
+  document.body.appendChild(toggleBtn);
 });
+
+getUserInfo();
+fetchLogs();
+showDigitalClock();
+animateAnalogClock();

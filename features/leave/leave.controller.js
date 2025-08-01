@@ -13,6 +13,7 @@ const LeaveController = {
     try {
       await LeaveService.requestLeave(userId, reason, from_date, to_date);
 
+      // Get employee name and email
       db.get(
         "SELECT name, email FROM users WHERE id = ?",
         [userId],
@@ -74,6 +75,7 @@ const LeaveController = {
     try {
       await LeaveService.updateLeaveStatus(id, status);
 
+      // Get user's name & email based on leave ID
       db.get(
         `SELECT u.name, u.email FROM leave_requests lr
          JOIN users u ON u.id = lr.user_id WHERE lr.id = ?`,

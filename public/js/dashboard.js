@@ -3,47 +3,12 @@ function logout() {
   window.location.href = "./login.html";
 }
 
-function toPHTimeString(dateStr, isTimeOnly = false) {
-  if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  const utc8 = new Date(date.getTime() + 8 * 60 * 60 * 1000);
-  return isTimeOnly
-    ? utc8.toLocaleTimeString("en-GB", { hour12: false })
-    : utc8.toISOString().split("T")[0];
-}
-
-function showDigitalClock() {
+function showClock() {
   const now = new Date();
-  const options = {
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-    hour12: true,
-  };
-  document.getElementById("clock").textContent = now.toLocaleTimeString(
-    "en-US",
-    options
-  );
-  requestAnimationFrame(showDigitalClock);
-}
-
-function animateAnalogClock() {
-  const now = new Date();
-  const sec = now.getSeconds() + now.getMilliseconds() / 1000;
-  const min = now.getMinutes() + sec / 60;
-  const hr = now.getHours() + min / 60;
-
-  document.querySelector(
-    ".hand.second"
-  ).style.transform = `translateX(-50%) rotate(${sec * 6}deg)`;
-  document.querySelector(
-    ".hand.minute"
-  ).style.transform = `translateX(-50%) rotate(${min * 6}deg)`;
-  document.querySelector(
-    ".hand.hour"
-  ).style.transform = `translateX(-50%) rotate(${hr * 30}deg)`;
-
-  requestAnimationFrame(animateAnalogClock);
+  const time = now.toLocaleTimeString("en-US", { hour12: true });
+  const clock = document.getElementById("clock");
+  if (clock) clock.textContent = time;
+  requestAnimationFrame(showClock);
 }
 
 function getUserInfo() {
@@ -70,16 +35,16 @@ async function fetchLogs() {
     });
 
     const logs = await res.json();
+
     const rows = logs
       .map(
         (log) => `
-        <tr>
-          <td>${toPHTimeString(log.date)}</td>
-          <td>${toPHTimeString(log.time_in, true)}</td>
-          <td>${toPHTimeString(log.time_out, true)}</td>
-          <td>${log.hours?.toFixed(2) || "0.00"}</td>
-        </tr>
-      `
+      <tr>
+        <td>${log.date}</td>
+        <td>${log.time_in || "-"}</td>
+        <td>${log.time_out || "-"}</td>
+        <td>${log.hours?.toFixed(2) || "0.00"}</td>
+      </tr>`
       )
       .join("");
 
@@ -105,7 +70,7 @@ async function exportCSV() {
     }
 
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
+    const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = "my_logs.csv";
@@ -119,6 +84,7 @@ async function exportCSV() {
   }
 }
 
+// Time In / Time Out
 async function timePunch(type) {
   const token = localStorage.getItem("token");
   if (!token) return logout();
@@ -148,7 +114,6 @@ async function timePunch(type) {
 function openLeaveForm() {
   document.getElementById("leaveModal").classList.remove("hidden");
 }
-
 function closeLeaveForm() {
   document.getElementById("leaveModal").classList.add("hidden");
 }
@@ -176,6 +141,7 @@ document.getElementById("leaveForm").addEventListener("submit", async (e) => {
     });
 
     const data = await res.json();
+
     if (res.ok) {
       alert("Leave request submitted.");
       document.getElementById("leaveForm").reset();
@@ -210,7 +176,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.body.appendChild(toggleBtn);
 });
 
+showClock();
 getUserInfo();
 fetchLogs();
-showDigitalClock();
-animateAnalogClock();

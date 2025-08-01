@@ -5,45 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PBO Dashboard</title>
   <link rel="stylesheet" href="./css/style.css" />
-  <style>
-    .center-dot {
-      width: 8px;
-      height: 8px;
-      background: #001c54;
-      border-radius: 50%;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 10;
-    }
-  </style>
 </head>
 <body class="dashboard-screen">
+
+  <!-- Logo -->
   <div class="logo-container">
     <img src="./images/logo.png" alt="PBO Logo" class="dashboard-logo" />
   </div>
 
   <div class="dashboard-container">
+    <!-- Top Bar -->
     <div class="top-bar">
       <div class="greeting">Hello, <span id="username">User</span></div>
       <button class="btn-logout" onclick="logout()">LOG OUT</button>
     </div>
 
+    <!-- Clock -->
     <div class="clock-section">
       <div class="analog-clock">
-        <div class="hand hour" id="hourHand"></div>
-        <div class="hand minute" id="minuteHand"></div>
-        <div class="hand second" id="secondHand"></div>
+        <div class="hand hour"></div>
+        <div class="hand minute"></div>
+        <div class="hand second"></div>
         <div class="center-dot"></div>
       </div>
-      <div class="digital-clock" id="clock">00:00:00 AM</div>
+      <div class="digital-clock" id="clock">00:00:00</div>
       <div class="buttons">
         <button id="timeInBtn" class="btn-bubble-blue">TIME IN</button>
         <button id="timeOutBtn" class="btn-bubble-blue">TIME OUT</button>
       </div>
     </div>
 
+    <!-- Logs -->
     <div class="log-table">
       <h2>Your Logs</h2>
       <table>
@@ -59,12 +51,14 @@
       </table>
     </div>
 
+    <!-- Action Buttons -->
     <div class="actions">
       <button id="exportBtn" class="btn-bubble-yellow">EXPORT LOG</button>
       <button class="btn-bubble-red" onclick="openLeaveForm()">APPLY LEAVE</button>
     </div>
   </div>
 
+  <!-- Leave Modal -->
   <div id="leaveModal" class="modal hidden">
     <div class="modal-content">
       <h3>Leave Request</h3>
@@ -84,48 +78,6 @@
   </div>
 
   <!-- Scripts -->
-  <script>
-    function logout() {
-      localStorage.removeItem("token");
-      window.location.href = "./login.html";
-    }
-
-    function showClock() {
-      const now = new Date();
-      const options = { hour12: true, hour: "2-digit", minute: "2-digit", second: "2-digit" };
-      document.getElementById("clock").textContent = now.toLocaleTimeString("en-US", options);
-      requestAnimationFrame(showClock);
-    }
-
-    let lastSeconds = 0, totalRotations = 0;
-
-    function animateAnalogClock() {
-      const now = new Date();
-      const sec = now.getSeconds();
-      const min = now.getMinutes();
-      const hr = now.getHours();
-
-      // Track full second rotations to avoid resetting
-      if (sec < lastSeconds) totalRotations++;
-      lastSeconds = sec;
-
-      const secondDeg = (totalRotations * 60 + sec) * 6;
-      const minuteDeg = min * 6 + sec * 0.1;
-      const hourDeg = (hr % 12) * 30 + min * 0.5;
-
-      document.getElementById("secondHand").style.transform = `translateX(-50%) rotate(${secondDeg}deg)`;
-      document.getElementById("minuteHand").style.transform = `translateX(-50%) rotate(${minuteDeg}deg)`;
-      document.getElementById("hourHand").style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
-
-      requestAnimationFrame(animateAnalogClock);
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      showClock();
-      animateAnalogClock();
-    });
-  </script>
-  <script src="./js/utils.js"></script>
   <script src="./js/dashboard.js"></script>
 </body>
 </html>

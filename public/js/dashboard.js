@@ -3,12 +3,44 @@ function logout() {
   window.location.href = "./login.html";
 }
 
+// 12-hour digital clock
 function showClock() {
   const now = new Date();
-  const time = now.toLocaleTimeString("en-US", { hour12: true });
-  const clock = document.getElementById("clock");
-  if (clock) clock.textContent = time;
+  const options = {
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: true,
+  };
+  document.getElementById("clock").textContent = now.toLocaleTimeString(
+    "en-US",
+    options
+  );
   requestAnimationFrame(showClock);
+}
+
+// Analog clock with smooth rotation
+function animateAnalogClock() {
+  const now = new Date();
+  const sec = now.getSeconds() + now.getMilliseconds() / 1000;
+  const min = now.getMinutes() + sec / 60;
+  const hr = (now.getHours() % 12) + min / 60;
+
+  const secondDeg = sec * 6;
+  const minuteDeg = min * 6;
+  const hourDeg = hr * 30;
+
+  document.querySelector(
+    ".hand.second"
+  ).style.transform = `translateX(-50%) rotate(${secondDeg}deg)`;
+  document.querySelector(
+    ".hand.minute"
+  ).style.transform = `translateX(-50%) rotate(${minuteDeg}deg)`;
+  document.querySelector(
+    ".hand.hour"
+  ).style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
+
+  requestAnimationFrame(animateAnalogClock);
 }
 
 function getUserInfo() {
@@ -25,6 +57,20 @@ function getUserInfo() {
   }
 }
 
+// Adjust UTC time to PH time (UTC+8)
+function toPHT(time) {
+  if (!time) return "-";
+  const date = new Date(time + "Z");
+  return date.toLocaleTimeString("en-PH", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: "Asia/Manila",
+  });
+}
+
+// Fetch and display logs
 async function fetchLogs() {
   const token = localStorage.getItem("token");
   if (!token) return logout();
@@ -33,7 +79,6 @@ async function fetchLogs() {
     const res = await fetch("/api/logs/user", {
       headers: { Authorization: `Bearer ${token}` },
     });
-
     const logs = await res.json();
 
     const rows = logs
@@ -41,10 +86,11 @@ async function fetchLogs() {
         (log) => `
       <tr>
         <td>${log.date}</td>
-        <td>${log.time_in || "-"}</td>
-        <td>${log.time_out || "-"}</td>
+        <td>${toPHT(log.time_in)}</td>
+        <td>${toPHT(log.time_out)}</td>
         <td>${log.hours?.toFixed(2) || "0.00"}</td>
-      </tr>`
+      </tr>
+    `
       )
       .join("");
 
@@ -55,6 +101,34 @@ async function fetchLogs() {
   }
 }
 
+// Time punch
+async function timePunch(type) {
+  const token = localStorage.getItem("token");
+  if (!token) return logout();
+
+  try {
+    const res = await fetch(`/api/logs/${type}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert(`${type.replace("-", " ").toUpperCase()} successful`);
+      fetchLogs();
+    } else {
+      alert(data.error || "Something went wrong");
+    }
+  } catch (err) {
+    alert("Failed to record time.");
+    console.error(err);
+  }
+}
+
+// Export logs
 async function exportCSV() {
   const token = localStorage.getItem("token");
   if (!token) return logout();
@@ -84,33 +158,7 @@ async function exportCSV() {
   }
 }
 
-// Time In / Time Out
-async function timePunch(type) {
-  const token = localStorage.getItem("token");
-  if (!token) return logout();
-
-  try {
-    const res = await fetch(`/api/logs/${type}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      alert(`${type.replace("-", " ").toUpperCase()} successful`);
-      fetchLogs();
-    } else {
-      alert(data.error || "Something went wrong");
-    }
-  } catch (err) {
-    alert("Failed to record time.");
-    console.error(err);
-  }
-}
-
+// Leave form
 function openLeaveForm() {
   document.getElementById("leaveModal").classList.remove("hidden");
 }
@@ -118,6 +166,7 @@ function closeLeaveForm() {
   document.getElementById("leaveModal").classList.add("hidden");
 }
 
+// Submit leave
 document.getElementById("leaveForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const token = localStorage.getItem("token");
@@ -141,7 +190,6 @@ document.getElementById("leaveForm").addEventListener("submit", async (e) => {
     });
 
     const data = await res.json();
-
     if (res.ok) {
       alert("Leave request submitted.");
       document.getElementById("leaveForm").reset();
@@ -155,27 +203,19 @@ document.getElementById("leaveForm").addEventListener("submit", async (e) => {
   }
 });
 
+// Events
 document
   .getElementById("timeInBtn")
-  ?.addEventListener("click", () => timePunch("time-in"));
+  .addEventListener("click", () => timePunch("time-in"));
 document
   .getElementById("timeOutBtn")
-  ?.addEventListener("click", () => timePunch("time-out"));
-document.getElementById("exportBtn")?.addEventListener("click", exportCSV);
+  .addEventListener("click", () => timePunch("time-out"));
+document.getElementById("exportBtn").addEventListener("click", exportCSV);
 
+// Init
 document.addEventListener("DOMContentLoaded", () => {
-  const toggleBtn = document.createElement("button");
-  toggleBtn.className = "night-toggle";
-  toggleBtn.textContent = " Night Mode";
-  toggleBtn.onclick = () => {
-    document.body.classList.toggle("night-mode");
-    toggleBtn.textContent = document.body.classList.contains("night-mode")
-      ? " Light Mode"
-      : " Night Mode";
-  };
-  document.body.appendChild(toggleBtn);
+  showClock();
+  animateAnalogClock();
+  getUserInfo();
+  fetchLogs();
 });
-
-showClock();
-getUserInfo();
-fetchLogs();

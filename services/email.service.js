@@ -1,44 +1,45 @@
 const nodemailer = require("nodemailer");
-require("dotenv").config();
 
 const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE,
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
 
-// Notify admin when a leave request is made
-async function notifyAdminOfLeave({ name, email, reason, from_date, to_date }) {
-  const message = `
-    Leave Request from: ${name} (${email})
-    From: ${from_date}
-    To: ${to_date}
-    Reason: ${reason}
+function notifyUserOfDecision({ name, email, status }) {
+  const subject = `Leave ${status === "approved" ? "Approved" : "Rejected"}`;
+  const html = `
+    <p>Dear ${name},</p>
+    <p>Your leave request has been <strong>${status.toUpperCase()}</strong>.</p>
+    <p>Regards,<br>PBO GLOBAL HR</p>
+  `;
+
+  return transporter.sendMail({
+    from: `"PBO GLOBAL" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject,
+    html,
+  });
+}
+
+function notifyAdminOfLeave({ name, email, reason, from_date, to_date }) {
+  const subject = `New Leave Request - ${name}`;
+  const html = `
+    <p>Employee <strong>${name}</strong> (${email}) submitted a leave request.</p>
+    <p><strong>Reason:</strong> ${reason}</p>
+    <p><strong>From:</strong> ${from_date}<br><strong>To:</strong> ${
+    to_date || from_date
+  }</p>
   `;
 
   return transporter.sendMail({
     from: `"PBO GLOBAL" <${process.env.EMAIL_USER}>`,
     to: process.env.ADMIN_EMAIL,
-    subject: `Leave Request from ${name}`,
-    text: message,
+    subject,
+    html,
   });
 }
 
-// Notify employee when their request is approved/rejected
-async function notifyUserOfDecision({ name, email, status }) {
-  const message = `Hello ${name}, your leave request has been ${status}.`;
-
-  return transporter.sendMail({
-    from: `"PBO GLOBAL" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: `Your Leave Request was ${status}`,
-    text: message,
-  });
-}
-
-module.exports = {
-  notifyAdminOfLeave,
-  notifyUserOfDecision,
-};
+module.exports = { notifyAdminOfLeave, notifyUserOfDecision };

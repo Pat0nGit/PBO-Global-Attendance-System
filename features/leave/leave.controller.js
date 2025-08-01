@@ -13,29 +13,26 @@ const LeaveController = {
     try {
       await LeaveService.requestLeave(userId, reason, from_date, to_date);
 
-      // Get user info using a promise wrapper
-      const user = await new Promise((resolve, reject) => {
-        db.get(
-          `SELECT u.name, u.email FROM leave_requests lr
-     JOIN users u ON u.id = lr.user_id WHERE lr.id = ?`,
-          [id],
-          (err, row) => {
-            if (err) {
-              console.error(" Error fetching user for status update:", err);
-              return reject(err);
+      db.get(
+        "SELECT name, email FROM users WHERE id = ?",
+        [userId],
+        async (err, user) => {
+          if (!err && user) {
+            try {
+              await notifyAdminOfLeave({
+                name: user.name,
+                email: user.email,
+                reason,
+                from_date,
+                to_date,
+              });
+              console.log(` Admin notified of leave from ${user.name}`);
+            } catch (mailErr) {
+              console.error(" Failed to notify admin:", mailErr);
             }
-            resolve(row);
           }
-        );
-      });
-
-      console.log(" Attempting to notify user of decision...");
-      await notifyUserOfDecision({
-        name: user.name,
-        email: user.email,
-        status,
-      });
-      console.log(` Notified ${user.name} of leave ${status}`);
+        }
+      );
 
       res.status(201).json({ message: "Leave request submitted." });
     } catch (err) {
@@ -77,7 +74,6 @@ const LeaveController = {
     try {
       await LeaveService.updateLeaveStatus(id, status);
 
-      // Get user's name & email based on leave ID
       db.get(
         `SELECT u.name, u.email FROM leave_requests lr
          JOIN users u ON u.id = lr.user_id WHERE lr.id = ?`,

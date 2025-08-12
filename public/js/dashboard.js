@@ -5,10 +5,46 @@ function logout() {
 
 function showClock() {
   const now = new Date();
-  const time = now.toLocaleTimeString("en-US", { hour12: true });
+  const options = { timeZone: "Asia/Manila", hour12: false };
+  const time = now.toLocaleTimeString("en-PH", options);
   const clock = document.getElementById("clock");
   if (clock) clock.textContent = time;
   requestAnimationFrame(showClock);
+}
+
+// Smooth Analog Clock - PH Time
+function updateAnalogClock() {
+  const now = new Date();
+
+  // Get PH time without manual UTC math
+  const options = { timeZone: "Asia/Manila" };
+  const phHours = parseInt(
+    now.toLocaleString("en-PH", { ...options, hour: "numeric", hour12: false })
+  );
+  const phMinutes = parseInt(
+    now.toLocaleString("en-PH", { ...options, minute: "numeric" })
+  );
+  const phSeconds = parseInt(
+    now.toLocaleString("en-PH", { ...options, second: "numeric" })
+  );
+  const phMilliseconds = now.getMilliseconds();
+
+  // Smooth rotation
+  const hourDeg = ((phHours % 12) + phMinutes / 60 + phSeconds / 3600) * 30;
+  const minuteDeg = (phMinutes + phSeconds / 60) * 6;
+  const secondDeg = (phSeconds + phMilliseconds / 1000) * 6;
+
+  document.querySelector(
+    ".hand.hour"
+  ).style.transform = `rotate(${hourDeg}deg)`;
+  document.querySelector(
+    ".hand.minute"
+  ).style.transform = `rotate(${minuteDeg}deg)`;
+  document.querySelector(
+    ".hand.second"
+  ).style.transform = `rotate(${secondDeg}deg)`;
+
+  requestAnimationFrame(updateAnalogClock);
 }
 
 function getUserInfo() {
@@ -37,15 +73,28 @@ async function fetchLogs() {
     const logs = await res.json();
 
     const rows = logs
-      .map(
-        (log) => `
-      <tr>
-        <td>${log.date}</td>
-        <td>${log.time_in || "-"}</td>
-        <td>${log.time_out || "-"}</td>
-        <td>${log.hours?.toFixed(2) || "0.00"}</td>
-      </tr>`
-      )
+      .map((log) => {
+        const date = log.date;
+        const timeIn = log.time_in
+          ? new Date(`1970-01-01T${log.time_in}Z`).toLocaleTimeString("en-PH", {
+              hour12: false,
+            })
+          : "-";
+        const timeOut = log.time_out
+          ? new Date(`1970-01-01T${log.time_out}Z`).toLocaleTimeString(
+              "en-PH",
+              { hour12: false }
+            )
+          : "-";
+
+        return `
+        <tr>
+          <td>${date}</td>
+          <td>${timeIn}</td>
+          <td>${timeOut}</td>
+          <td>${log.hours?.toFixed(2) || "0.00"}</td>
+        </tr>`;
+      })
       .join("");
 
     document.getElementById("logRows").innerHTML = rows;
@@ -84,7 +133,6 @@ async function exportCSV() {
   }
 }
 
-// Time In / Time Out
 async function timePunch(type) {
   const token = localStorage.getItem("token");
   if (!token) return logout();
@@ -174,8 +222,9 @@ document.addEventListener("DOMContentLoaded", () => {
       : " Night Mode";
   };
   document.body.appendChild(toggleBtn);
-});
 
-showClock();
-getUserInfo();
-fetchLogs();
+  updateAnalogClock();
+  showClock();
+  getUserInfo();
+  fetchLogs();
+});

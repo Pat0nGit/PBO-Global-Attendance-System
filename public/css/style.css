@@ -420,8 +420,9 @@ body.night-mode .modal-content {
 
 
 .analog-clock .hand {
-  transition: transform 0.5s ease-in-out;
+  transition: transform 0.1s linear;
 }
+
 
 
 .logo-container {
